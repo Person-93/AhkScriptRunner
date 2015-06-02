@@ -1,0 +1,56 @@
+/*
+This component alerts the user when capslock or numlock is changed and
+when the network adapter toggle button is pressed. It also contains a
+notifier function which can be used by other components
+*/
+Notifier_Auto:
+return
+
+Notifier_Exit:
+return
+
+
+#MaxHotkeysPerInterval, 1000
+#MaxThreadsPerHotkey, 1000
+~CapsLock::
+~NumLock::
+Notifier_notify(SubStr(A_ThisHotkey, 2) " is " (GetKeyState(SubStr(A_ThisHotkey, 2), "t")?"on":"off") ".")
+return
+
+~SC176::Notifier_notify("The wireless network adapter state has changed.")
+#MaxHotkeysPerInterval
+#MaxThreadsPerHotkey
+
+Notifier_notify(message, subject:="")
+{
+	static MiscNotifySubject
+	static MiscNotifyMessage
+	static Notifier_GuiHwnd
+	
+	SetTimer, Notifier_Destroy, Off
+	Gui, Misc:Destroy
+	
+	try
+	{
+		Gui, Misc:Color, EEAA99
+		Gui, Misc:  -caption AlwaysOnTop +ToolWindow +LastFound +hwndNotifier_GuiHwnd
+		WinSet, TransColor, EEAA99
+		Gui, Misc:font, s25 b700 underline
+		if (subject != "")
+			Gui, Misc:Add, Text, vMiscNotifyMessage x0 y9 w400 h50 +Center cGreen, % Subject
+		Gui, Misc:font, norm
+		Gui, Misc:Add, Text, x35 y50 w326 +Center vMiscNotifySubject cGreen, % Message
+		Gui, Misc:show, noactivate
+		TrayTip, %subject%, %message%
+		SetTimer, Notifier_Destroy, -3000
+	}
+	catch
+	{
+		Gui, Misc:Destroy
+		Notifier_Notify(message, subject)
+	}
+}
+
+Notifier_Destroy:
+Gui, Misc:Destroy
+return

@@ -1,0 +1,32 @@
+Phone_Auto:
+return
+
+Phone_Exit:
+return
+
+^+d::
+phone_call(phone_getSelectedText())
+return
+
+phone_call(number)
+{
+	;run the Google Voice extension to chrome
+	Run, "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" chrome-extension://kcnhkahnjcbndmmehfkdnkjomaanaooo/popup.html
+	WinWaitActive, chrome-extension://kcnhkahnjcbndmmehfkdnkjomaanaooo/popup.html - Google Chrome ahk_class Chrome_WidgetWin_1
+	sleep, 100
+	
+	;remove all non-digit characters and send input
+	SendInput % RegExReplace(number,"[^\d]+")
+}
+
+phone_getSelectedText()
+{
+	temp_clip := ClipboardAll
+	Clipboard := ""
+	SendInput, ^c
+	ClipWait, 1
+	text := Clipboard
+	Clipboard := temp_clip
+	return text
+}
+	

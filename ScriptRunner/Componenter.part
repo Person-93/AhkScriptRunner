@@ -1,0 +1,212 @@
+/*
+This component contains tools to manage components.
+*/
+
+Componenter_Auto:
+Componenter_Auto()
+
+Componenter_Auto()
+{
+	global A_Properties
+
+	
+	;add the first few items to the Add Menu
+	Menu, AddList, add, Create New, Componenter_New
+	Menu, AddList, add, Browse, Componenter_Find
+	Menu, AddList, add
+
+	;add an item to the Submenus for each active component
+	for key, name in A_Properties.Components
+	{
+		Menu, EditList, Add, % name, Componenter_Edit
+		Menu, RemoveList, Add, % name, Componenter_Remove
+		Menu, DeleteList, Add, % name, Componenter_Delete
+	}
+
+	;add a submenu item for each inactive component
+	loop, % A_Properties.Name "\Inactive\*.part"
+	{
+		if (A_Index = 1) ;add a separator between active and inactive components
+		{
+			menu, EditList, Add
+			Menu, DeleteList, Add
+		}
+		
+		Componenter_Menus_Name := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 5)
+		
+		Menu, AddList, Add, % Componenter_Menus_Name, Componenter_Add
+		menu, EditList, add, % Componenter_Menus_Name, Componenter_Edit_Inactive
+		menu, DeleteList, add, % Componenter_Menus_Name, Componenter_Delete_Inactive
+	}
+
+	;Build the tray menu
+	Menu, tray, add, Add Component, :AddList
+	Menu, tray, add, Edit Component, :EditList
+	Menu, tray, add, Remove Component, :RemoveList
+	Menu, tray, add, Delete Component, :DeleteList
+	menu, tray, add
+	menu, tray, nostandard
+	menu, tray, standard
+
+	;make sure that there is a directory for inactive components
+	if ( !FileExist(A_Properties.Name . "\Inactive") || !InStr(FileExist(A_Properties.Name . "\Inactive"), "D"))
+		FileCreateDir, % A_Properties.Name "\Inactive"
+}
+return
+
+Componenter_Exit:
+return
+
+Componenter_Add:
+IfExist, % A_Properties.Name "\" A_ThisMenuItem ".part"
+	MsgBox, 64, Componenter, The component is already added.
+IfExist, % A_Properties.Name "\Inactive\" A_ThisMenuItem ".part"
+	FileMove, % A_Properties.Name "\Inactive\" A_ThisMenuItem ".part", % A_Properties.Name "\" A_ThisMenuItem ".part"
+else
+{
+	MsgBox, 21, Componenter, The component cannot be found.
+	IfMsgBox, Retry
+		gosub, Componenter_Add
+	return
+}
+
+;run a new instance of the script and close the first instance
+A_Properties.Reload := 1
+ExitApp
+
+Componenter_New:
+Componenter_New()
+
+Componenter_New()
+{
+
+	global A_Properties
+	
+	;Prompt user for name of new component and check if it already exists
+	InputBox, componenter_NewName, Componenter, Enter a name for your new component:`n(Without the extension.)
+	If (Errorlevel)
+		Exit
+	sleep, 100
+	IfExist, % A_Properties.Name . "\" . componenter_NewName . ".part"
+	{
+		MsgBox, 16, Componenter, There is already a component by that name.
+		Exit
+	}
+	IfExist, % A_Properties.Name . "\Inactive\" . componenter_NewName . ".part"
+	{
+		MsgBox, 16, Componenter, There is already a component by that name.
+		Exit
+	}
+
+	;create new blank component
+	componenter_newcomponent = 
+	(
+	%componenter_NewName%_Auto:
+	return
+
+	%componenter_NewName%_Exit:
+	return
+	)
+	FileAppend, % componenter_newcomponent, % A_Properties.Name . "\Inactive\" . componenter_NewName . ".part"
+
+	;edit the component
+	;if you want this to work properly, you will have to edit this line to open the
+	;new component in your default AHK editor, or you can add a registry entry to
+	;open all PART files with your editor by default
+	run, % A_Properties.Name . "\Inactive\" . componenter_NewName . ".part"
+}
+return
+
+Componenter_Find:
+Componenter_Find()
+
+Componenter_Find()
+{
+
+	global A_Properties
+	
+	;prompt user to choose a new component
+	FileSelectFile, componenter_NewPart, 3,,Select a component to add, Component (*.part)
+
+	;ensure that the user's selection is a component
+	SplitPath, componenter_NewPart,,,componenter_NewPartExt,componenter_NewName
+	if (Errorlevel)
+		Exit
+
+	If (componenter_NewPartExt != "part")
+	{
+		MsgBox, 52, Componenter, The file that you selected is not a PART file.`nDo you want to rename it and proceed?
+		IfMsgBox, No
+			Exit
+	}
+
+	;check if there is already a component by that name
+	IfExist, % A_Properties.Name . "\" . componenter_NewName . ".part"
+	{
+		MsgBox, 16, Componenter, There is already a component by that name.
+		Exit
+	}
+	IfExist, % A_Properties.Name . "\Inactive\" . componenter_NewName . ".part"
+	{
+		MsgBox, 16, Componenter, There is already a component by that name.
+		Exit
+	}
+
+	;move the selected component
+	FileMove, % componenter_NewPart, % A_Properties.Name . "\" . componenter_NewName . ".part"
+
+	;run a new instance of the script and close the first instance
+	A_Properties.reload := 1
+	ExitApp
+}
+
+Componenter_Edit:
+;if you want this to work properly, you will have to edit this line to open the
+;new component in your default AHK editor, or you can add a registry entry to
+run, % A_Properties.Name . "\" A_ThisMenuItem . ".part"
+return
+
+Componenter_Edit_Inactive:
+;if you want this to work properly, you will have to edit this line to open the
+;new component in your default AHK editor, or you can add a registry entry to
+run, % A_Properties.Name . "\Inactive\" A_ThisMenuItem . ".part"
+return
+
+Componenter_Remove:
+IfExist, % A_Properties.Name "\" A_ThisMenuItem ".part"
+	FileMove, % A_Properties.Name "\" A_ThisMenuItem ".part", % A_Properties.Name "\Inactive\" A_ThisMenuItem ".part"
+else
+{
+	MsgBox, 16, Componenter, Component not found.
+	return
+}
+
+;run a new instance of the script and close the first instance
+A_Properties.reload := 1
+ExitApp
+
+Componenter_Delete:
+;get user confirmation before deleting
+MsgBox, 36, Delete Component, Are you sure you want to delete %A_ThisMenuItem%?
+
+IfMsgBox, Yes
+{
+	;Delete the component
+	FileDelete, % A_Properties.Name "\" A_ThisMenuItem ".part"
+
+	;run a new instance of the script and close the first instance
+	A_Properties.reload := 1
+	ExitApp
+}
+return
+
+Componenter_Delete_Inactive:
+;get user confirmation before deleting
+MsgBox, 36, Delete Component, Are you sure you want to delete %A_ThisMenuItem%?
+
+IfMsgBox, Yes
+{
+	;Delete the component
+	FileDelete, % A_Properties.Name "\Inactive\" A_ThisMenuItem ".part"
+}
+return

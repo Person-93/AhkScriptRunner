@@ -1,0 +1,68 @@
+PlayMusic_Auto:
+PlayMusic_Main("Start")
+return
+
+PlayMusic_Exit:
+PlayMusic_Main("End")
+return
+
+!m::PlayMusic_Main()
+
+PlayMusic_Main(runType:="Play")
+{
+	;static variables
+	static vlcPid
+	
+	if (IsFunc("PlayMusic_" runType))
+		PlayMusic_%runType%(vlcPid)
+}
+
+
+PlayMusic_Play(ByRef vlcPid)
+{
+	;Settings
+	static NotifyFunc := "Misc_Notify"	 ;the notify function should accept two parameters: message then subject
+	static ListLocation := "e:\Music\PlayLists\temp.m3u"
+	static PlayLocation := "e:\Music"
+	static PlayExt := "mp3"
+	static MediaPlayer := "C:\Program Files (x86)\VideoLAN\VLC\vlc.exe"	
+	
+	;close VLC is already running - this only works if using VLC
+	If (IsFunc(NotifyFunc))
+		%NotifyFunc%("Checking if Media Player is already running", "Play Music")
+	
+	PostMessage, 0x112, 0xF060,,, % "ahk_id " WinExist("ahk_pid " vlcPid) ;close the window gently
+	
+	;create playlist
+	If (IsFunc(NotifyFunc))
+		%NotifyFunc%("Creating Playlist", "Play Music")
+
+	Loop, % PlayLocation "\*." PlayExt
+	{
+		if (A_Index = 1)
+			list := "#EXTM3U`n`n"
+		
+		list .= A_LoopFileFullPath "`n"
+	}
+	FileDelete, %ListLocation%
+	FileAppend, %list%, %ListLocation%
+	
+	;run vlc media player
+	If (IsFunc(NotifyFunc))
+		%NotifyFunc%("Running Media Player", "Play Music")
+
+	run, %MediaPlayer% --loop --random %ListLocation%,,, vlcPid
+	
+	;done
+	If (IsFunc(NotifyFunc))
+		%NotifyFunc%("Done", "Play Music")
+}
+
+PlayMusic_Start(ByRef vlcPid)
+{
+	IniRead, vlcPid, %A_ScriptDir%\%A_ScriptName%.ini, PlayMusic, vlcPid, % ""
+}
+PlayMusic_End(ByRef vlcPid)
+{
+	IniWrite, %vlcPid%, %A_ScriptDir%\%A_ScriptName%.ini, PlayMusic, vlcPid
+}

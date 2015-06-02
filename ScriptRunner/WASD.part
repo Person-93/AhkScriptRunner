@@ -1,0 +1,66 @@
+/*
+This component allows the user to use the WASD keys as arrow keys.
+*/
+WASD_auto:
+WASD("off",0)
+return
+
+WASD_Exit:
+return
+
+!`::WASD()
+
+WASD(state:="", notify:=1)
+{
+	static wasd = "on"
+	
+	if (state <> "on" and state <> "off")
+		state := ""
+	
+	;if it's already off or function was explicitly told to turn it
+	if ( (state = "" and !wasd)   or   (state = "on" || state = 1)  )
+		gosub, TurnOn
+	else if ( (state = "" and wasd)   or   (state = "off" || state = 0)  )
+		gosub, TurnOff
+	else
+		throw, "The first parameter of the WASD function is invalid."
+	
+	if (notify)
+	{
+		if (isfunc("Notifier_notify"))
+			Notifier_notify("WASD is " . (wasd?"on":"off") . ".")
+		else
+			TrayTip,, % "WASD is " . (wasd?"on":"off") . "."
+	}
+	return
+	
+	TurnOn:
+	Hotkey, *w up, On
+	Hotkey, *a up, On
+	hotkey, *s up, On
+	Hotkey, *d up, On
+	Hotkey, *w , On
+	Hotkey, *a , On
+	hotkey, *s , On
+	Hotkey, *d , On
+	wasd := 1
+	return
+	
+	TurnOff:
+	Hotkey, *w up, Off
+	Hotkey, *a up, Off
+	hotkey, *s up, Off
+	Hotkey, *d up, Off
+	Hotkey, *w , Off
+	Hotkey, *a , Off
+	hotkey, *s , Off
+	Hotkey, *d , Off
+	wasd := 0
+	return
+}
+
+
+w::up
+a::Left
+s::Down
+d::Right	

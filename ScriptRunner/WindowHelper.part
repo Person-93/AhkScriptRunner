@@ -1,0 +1,84 @@
+/*
+This component contains hotkeys to allow easier mannipulation
+of windows
+*/
+WindowHelper_Auto:
+return
+
+WindowHelper_Exit:
+return
+
+#Numpad1:: ;toggle the active window always on top
+#NumpadEnd::
+WindowHelper_AlwaysOnTopToggle()
+return
+
+WindowHelper_AlwaysOnTopToggle()
+{
+	WinSet, AlwaysOnTop, Toggle, A
+	WinGet, ExStyle, ExStyle, A
+	Notifier_notify("The active window is " ((ExStyle & 0x8)?"":"not ") "always on top.")
+}
+
+^+w::PostMessage, 0x112, 0xF060,,, % "ahk_id " WinExist("A") ;close active window gently
+^!w::WinMinimize, % "ahk_id" WindowHelper_GetHighWin()
+^!+w::WindowHelper_KillActiveWin(WindowHelper_GetHighWin())
+
+
+;accepts a window handle, asks the user for confirmation,
+;  then kills the process that owns the window
+WindowHelper_KillActiveWin(window)
+{
+	WinGet, winPid, ProcessName, ahk_id %window%
+	
+	MsgBox, 4, Kill Active Window, % "Are you sure that you want to kill " winPid " ?"
+	IfMsgBox, yes
+	{
+		Process, close, % winPid
+		If not Errorlevel
+			MsgBox, 16, Kill Active Window, The process was already terminated or could not be accessed.
+	}
+}
+
+
+;checks if the active window is the desktop or the task bar
+;  if not, it returns the active window, if not it returns
+;  the topmost window
+
+;TODO the dll function returns a 0.  Maybe it's because the
+;  active window is not the highest in the Z order?
+WindowHelper_GetHighWin(called:="", hwnd:="")
+{
+	static static_hwnd
+	if (called = "")
+	{
+		active := WinExist("A")
+		;begining of if statement
+		if   ( active = WinExist("ahk_class Progman") ;desktop
+			|| active = WinExist("ahk_class Shell_TrayWnd") ;task bar
+			|| active = WinExist("ahk_class Button") ;start menu button
+			|| active = WinExist("DV2ControlHost")    ) ;start menu
+		;end of if statement
+		{
+			Enum := RegisterCallback("WindowHelper_WindowEnum", "Fast")
+			DllCall("EnumWindows", "Ptr", Enum)
+			return static_hwnd
+		}
+		else
+			return active
+	}
+	else if (called = "called")
+	{
+		DllCall("GlobalFree", "Ptr", Enum, "Ptr")
+		static_hwnd := hwnd
+	}
+	else
+		throw, "Param #1 is invalid: Specifically " called
+}
+
+;helper function used by WindowEnum
+WindowHelper_WindowEnum(hwnd, lparam)
+{
+	WindowHelper_GetHighWin("called", hwnd)
+	return 0
+}
